@@ -66,9 +66,15 @@ Thumbs.db
 *.zip
 DefenseFlowConfiguration_*.zip
 upgrade-*.tar.gz
+checkpoint.json
+checkpoint_completed_*.json
 
 # Logs
 *.log
+*.tmp
+*.temp
+temp/
+tmp/
 
 # Sensitive files
 config.ini
