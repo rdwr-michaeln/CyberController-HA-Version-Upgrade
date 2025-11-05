@@ -242,46 +242,48 @@ def version_update(base_url, upgrade_file, bytes_size, username=None, password=N
                 print("🔄 Keep-alive started (5 minute intervals)")
             
             try:
-                # Use chunked reading with progress tracking for better visibility
+                # Progress tracking file wrapper
                 class ProgressFileReader:
                     def __init__(self, file_path, file_size):
-                        self.file_path = file_path
+                        self.file = open(file_path, 'rb')
                         self.file_size = file_size
                         self.bytes_read = 0
                         self.last_percent = -1
                         
-                    def __iter__(self):
-                        """Iterator that yields file chunks with progress tracking"""
-                        with open(self.file_path, 'rb') as f:
-                            while True:
-                                chunk = f.read(8192)  # 8KB chunks for better progress granularity
-                                if not chunk:
-                                    break
-                                    
-                                self.bytes_read += len(chunk)
+                    def read(self, size=-1):
+                        """Read method that tracks progress"""
+                        chunk = self.file.read(size)
+                        if chunk:
+                            self.bytes_read += len(chunk)
+                            
+                            # Update progress display
+                            percent = int((self.bytes_read / self.file_size) * 100)
+                            if percent != self.last_percent and percent % 5 == 0:  # Update every 5%
+                                mb_uploaded = self.bytes_read / (1024*1024)
+                                total_mb = self.file_size / (1024*1024)
+                                print(f"\r   ⬆️  {percent}% - {mb_uploaded:.1f} MB / {total_mb:.1f} MB", end='', flush=True)
+                                self.last_percent = percent
                                 
-                                # Update progress display
-                                percent = int((self.bytes_read / self.file_size) * 100)
-                                if percent != self.last_percent and percent % 5 == 0:  # Update every 5%
-                                    mb_uploaded = self.bytes_read / (1024*1024)
-                                    total_mb = self.file_size / (1024*1024)
-                                    print(f"\r   ⬆️  {percent}% - {mb_uploaded:.1f} MB / {total_mb:.1f} MB", end='', flush=True)
-                                    self.last_percent = percent
-                                    
-                                yield chunk
+                        return chunk
                     
                     def __len__(self):
                         return self.file_size
+                        
+                    def close(self):
+                        self.file.close()
                 
-                # Use progress file reader with iterator
+                # Use progress file reader
                 file_reader = ProgressFileReader(upgrade_file, bytes_size)
-                files = {
-                    'Filedata': (os.path.basename(upgrade_file), file_reader, 'application/octet-stream')
-                }
-                # Enhanced timeout and connection settings
-                response = session.post(url, files=files, verify=False, timeout=3600, 
-                                      stream=False)
-                print()  # New line after progress
+                try:
+                    files = {
+                        'Filedata': (os.path.basename(upgrade_file), file_reader, 'application/octet-stream')
+                    }
+                    # Enhanced timeout and connection settings
+                    response = session.post(url, files=files, verify=False, timeout=3600, 
+                                          stream=False)
+                    print()  # New line after progress
+                finally:
+                    file_reader.close()
             finally:
                 # Stop keep-alive thread
                 if keep_alive_thread:
