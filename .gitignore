@@ -73,3 +73,7 @@ upgrade-*.tar.gz
 # Sensitive files
 config.ini
 secrets.env
+
+# Checkpoint files
+checkpoint.json
+checkpoint_completed_*.json
