@@ -347,11 +347,15 @@ def version_update(base_url, upgrade_file, bytes_size, username=None, password=N
 
 def version_update_chunked(base_url, upgrade_file, bytes_size, username=None, password=None):
     """
-    Enhanced version update with chunked upload for better memory management
+    Enhanced version update with chunked upload and keep-alive for better memory management
     """
+    global keep_alive_stop
+    keep_alive_thread = None
+    ip_address = base_url.split('//')[1].split('/')[0] if '//' in base_url else base_url.split('/')[0]
+    
     url = f"{base_url}/mgmt/system/config/action/software?type=full&filesize={bytes_size}"
     
-    print(f"\n🔄 Starting Version Update (Chunked Method)")
+    print(f"\n🔄 Starting Version Update (Chunked Method with Keep-Alive)")
     print(f"{'='*60}")
     print(f"📁 File: {os.path.basename(upgrade_file)}")
     print(f"📊 Size: {bytes_size / (1024*1024):.2f} MB ({bytes_size:,} bytes)")
@@ -362,6 +366,9 @@ def version_update_chunked(base_url, upgrade_file, bytes_size, username=None, pa
     if not HAS_CHUNKED_SUPPORT:
         print("⚠️  requests-toolbelt not found, using fallback chunked method...")
         print("💡 For better performance, install it with: pip install requests-toolbelt")
+    
+    # For files > 500MB, start keep-alive thread during upload
+    start_keep_alive = bytes_size > 500 * 1024 * 1024  # 500MB threshold
     
     max_retries = 3
     for attempt in range(max_retries):
@@ -377,12 +384,26 @@ def version_update_chunked(base_url, upgrade_file, bytes_size, username=None, pa
             
             print(f"⬆️  Uploading file with chunked method... This may take several minutes...")
             
-            if HAS_CHUNKED_SUPPORT:
-                # Use requests-toolbelt for optimal chunked upload
-                success = _upload_with_toolbelt(url, upgrade_file, bytes_size)
-            else:
-                # Use fallback chunked method
-                success = _upload_with_fallback(url, upgrade_file, bytes_size)
+            # Start keep-alive thread for large files
+            if start_keep_alive:
+                keep_alive_stop.clear()
+                keep_alive_thread = threading.Thread(target=send_keep_alive, args=(ip_address, 300))
+                keep_alive_thread.daemon = True
+                keep_alive_thread.start()
+                print("🔄 Keep-alive started (5 minute intervals)")
+            
+            try:
+                if HAS_CHUNKED_SUPPORT:
+                    # Use requests-toolbelt for optimal chunked upload
+                    success = _upload_with_toolbelt(url, upgrade_file, bytes_size)
+                else:
+                    # Use fallback chunked method
+                    success = _upload_with_fallback(url, upgrade_file, bytes_size)
+            finally:
+                # Stop keep-alive thread
+                if keep_alive_thread:
+                    keep_alive_stop.set()
+                    print("🛑 Keep-alive stopped")
             
             if not success:
                 if attempt < max_retries - 1:

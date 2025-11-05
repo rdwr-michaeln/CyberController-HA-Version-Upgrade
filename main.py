@@ -88,10 +88,19 @@ def get_user_inputs():
     
     file_size = os.path.getsize(upgrade_file)
     
-    # Upload method selection
-    print(f"\n📤 Upload Method Selection")
+    # Display file information
+    print(f"\n📤 Upload Configuration")
     print("=" * 30)
     print(f"File size: {file_size / (1024*1024):.2f} MB ({file_size / (1024*1024*1024):.2f} GB)")
+    print(f"Method: Chunked upload with keep-alive")
+    
+    # Check if requests-toolbelt is available
+    try:
+        from requests_toolbelt.multipart.encoder import MultipartEncoder
+        print("✅ requests-toolbelt available - optimal performance")
+    except ImportError:
+        print("⚠️  requests-toolbelt not found - will use fallback method")
+        print("💡 For better performance, install it with: pip install requests-toolbelt")
     
     # Warn about large files
     if file_size > 5 * 1024 * 1024 * 1024:  # 5GB
@@ -100,29 +109,8 @@ def get_user_inputs():
         print(f"Upload may take 30+ minutes per controller")
         print(f"Ensure stable network connection and sufficient disk space")
     
-    print(f"\nChoose upload method:")
-    print(f"1. Regular Upload (with keep-alive) - Current method")
-    print(f"2. Chunked Upload (memory efficient) - Recommended for large files")
-    
-    while True:
-        choice = input("\nSelect upload method (1 or 2): ").strip()
-        if choice == '1':
-            upload_method = 'regular'
-            print("✅ Selected: Regular upload with keep-alive")
-            break
-        elif choice == '2':
-            upload_method = 'chunked'
-            print("✅ Selected: Chunked upload (memory efficient)")
-            # Check if requests-toolbelt is available
-            try:
-                from requests_toolbelt.multipart.encoder import MultipartEncoder
-                print("✅ requests-toolbelt available - optimal performance")
-            except ImportError:
-                print("⚠️  requests-toolbelt not found - will use fallback method")
-                print("💡 For better performance, install it with: pip install requests-toolbelt")
-            break
-        else:
-            print("❌ Invalid choice. Please enter 1 or 2.")
+    # Always use chunked upload
+    upload_method = 'chunked'
     
     # Final confirmation for large files
     if file_size > 5 * 1024 * 1024 * 1024:  # 5GB
@@ -143,7 +131,7 @@ def get_user_inputs():
     }
 
 def perform_version_update(base_url, config, controller_type="controller"):
-    """Perform version update using the selected method"""
+    """Perform version update using chunked upload with keep-alive"""
     # Determine credentials based on controller type
     if "secondary" in controller_type.lower():
         username = config.get('secondary_username')
@@ -152,14 +140,9 @@ def perform_version_update(base_url, config, controller_type="controller"):
         username = config.get('primary_username') 
         password = config.get('primary_password')
     
-    if config['upload_method'] == 'chunked':
-        print(f"🔄 Using chunked upload method for {controller_type}")
-        return version_update_chunked(base_url, config['upgrade_file'], config['file_size'],
-                                    username, password)
-    else:
-        print(f"🔄 Using regular upload method for {controller_type}")
-        return version_update(base_url, config['upgrade_file'], config['file_size'],
-                            username, password)
+    print(f"🔄 Using chunked upload with keep-alive for {controller_type}")
+    return version_update_chunked(base_url, config['upgrade_file'], config['file_size'],
+                                username, password)
 
 def check_license_validity(config):
     """Check license validity on primary controller"""
@@ -394,7 +377,7 @@ def main():
         print(f"Primary: {config['primary_address']}")
         print(f"Secondary: {config['secondary_address']}")
         print(f"Upgrade file: {config['upgrade_file']} ({config['file_size'] / (1024*1024):.2f} MB)")
-        print(f"Upload method: {config['upload_method'].title()} {'(with progress tracking)' if config['upload_method'] == 'chunked' else '(with keep-alive)'}")
+        print(f"Upload method: Chunked (with progress tracking and keep-alive)")
         
         # Check license validity first
         license_valid = check_license_validity(config)
