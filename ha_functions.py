@@ -242,48 +242,19 @@ def version_update(base_url, upgrade_file, bytes_size, username=None, password=N
                 print("🔄 Keep-alive started (5 minute intervals)")
             
             try:
-                # Progress tracking file wrapper
-                class ProgressFileReader:
-                    def __init__(self, file_path, file_size):
-                        self.file = open(file_path, 'rb')
-                        self.file_size = file_size
-                        self.bytes_read = 0
-                        self.last_percent = -1
-                        
-                    def read(self, size=-1):
-                        """Read method that tracks progress"""
-                        chunk = self.file.read(size)
-                        if chunk:
-                            self.bytes_read += len(chunk)
-                            
-                            # Update progress display
-                            percent = int((self.bytes_read / self.file_size) * 100)
-                            if percent != self.last_percent and percent % 5 == 0:  # Update every 5%
-                                mb_uploaded = self.bytes_read / (1024*1024)
-                                total_mb = self.file_size / (1024*1024)
-                                print(f"\r   ⬆️  {percent}% - {mb_uploaded:.1f} MB / {total_mb:.1f} MB", end='', flush=True)
-                                self.last_percent = percent
-                                
-                        return chunk
-                    
-                    def __len__(self):
-                        return self.file_size
-                        
-                    def close(self):
-                        self.file.close()
+                # Note: Progress tracking during file read, not network upload
+                # For true streaming progress, use chunked upload method instead
+                print(f"   📤 Reading file into memory...")
                 
-                # Use progress file reader
-                file_reader = ProgressFileReader(upgrade_file, bytes_size)
-                try:
+                with open(upgrade_file, 'rb') as f:
                     files = {
-                        'Filedata': (os.path.basename(upgrade_file), file_reader, 'application/octet-stream')
+                        'Filedata': (os.path.basename(upgrade_file), f, 'application/octet-stream')
                     }
+                    print(f"   🌐 Uploading to server (this may take several minutes)...")
                     # Enhanced timeout and connection settings
                     response = session.post(url, files=files, verify=False, timeout=3600, 
                                           stream=False)
-                    print()  # New line after progress
-                finally:
-                    file_reader.close()
+                print()
             finally:
                 # Stop keep-alive thread
                 if keep_alive_thread:
