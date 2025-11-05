@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 # Import all required functions from ha_functions.py
 from ha_functions import (
     login, break_ha, ha_status, get_router_id, 
-    establish_ha, version_update, version_update_chunked, download_df_config, upload_df_config,
+    establish_ha, version_update_chunked, download_df_config, upload_df_config,
     wait_for_ha_disable, wait_for_version_update, wait_for_ha_healthy,
     disable_protected_objects, update_network_elements_router_id, get_license
 )
