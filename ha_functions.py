@@ -242,13 +242,45 @@ def version_update(base_url, upgrade_file, bytes_size, username=None, password=N
                 print("🔄 Keep-alive started (5 minute intervals)")
             
             try:
-                with open(upgrade_file, 'rb') as f:
+                # Create a progress-tracking file reader
+                class ProgressFileReader:
+                    def __init__(self, file_path, file_size):
+                        self.file = open(file_path, 'rb')
+                        self.file_size = file_size
+                        self.bytes_read = 0
+                        self.last_percent = -1
+                        
+                    def read(self, size=65536):  # 64KB chunks
+                        chunk = self.file.read(size)
+                        self.bytes_read += len(chunk)
+                        
+                        percent = int((self.bytes_read / self.file_size) * 100)
+                        if percent != self.last_percent and percent % 5 == 0:  # Update every 5%
+                            mb_uploaded = self.bytes_read / (1024*1024)
+                            total_mb = self.file_size / (1024*1024)
+                            print(f"\r   ⬆️  {percent}% - {mb_uploaded:.1f} MB / {total_mb:.1f} MB", end='', flush=True)
+                            self.last_percent = percent
+                            
+                        return chunk
+                    
+                    def __len__(self):
+                        return self.file_size
+                        
+                    def close(self):
+                        self.file.close()
+                
+                # Use progress file reader
+                file_reader = ProgressFileReader(upgrade_file, bytes_size)
+                try:
                     files = {
-                        'Filedata': (upgrade_file, f, 'application/octet-stream')
+                        'Filedata': (os.path.basename(upgrade_file), file_reader, 'application/octet-stream')
                     }
                     # Enhanced timeout and connection settings
                     response = session.post(url, files=files, verify=False, timeout=3600, 
                                           stream=False)
+                    print()  # New line after progress
+                finally:
+                    file_reader.close()
             finally:
                 # Stop keep-alive thread
                 if keep_alive_thread:
