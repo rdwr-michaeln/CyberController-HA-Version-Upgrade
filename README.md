@@ -31,7 +31,12 @@ An automated tool for managing High Availability (HA) version upgrades on Radwar
 ### Connectivity Checklist
 Before running the automation:
 1. Verify you can ping both primary and secondary controller IP addresses
-2. Test HTTPS access: `curl -k https://<controller-ip>/mgmt/system/status`
+2. Test HTTPS access with authentication:
+   ```bash
+   curl -k -X POST https://<controller-ip>/mgmt/system/user/login \
+     -H "Content-Type: application/json" \
+     -d '{"username": "your_username", "password": "your_password"}'
+   ```
 3. Ensure no firewalls are blocking HTTPS traffic
 4. Check that both controllers are on the same network segment (recommended)
 5. Verify DNS resolution if using hostnames instead of IP addresses
