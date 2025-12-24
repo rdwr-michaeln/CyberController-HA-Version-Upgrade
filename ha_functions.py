@@ -86,7 +86,7 @@ def ensure_authenticated(base_url, username, password):
     """Ensure we have a valid session, re-authenticate if needed"""
     try:
         # Test session with a simple API call
-        test_url = f"{base_url}/mgmt/system/status"
+        test_url = f"{base_url}/mgmt/system/user/accessibility"
         r = session.get(test_url, verify=False, timeout=10)
         if r.status_code == 401:
             print("🔑 Session expired, re-authenticating...")
