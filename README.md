@@ -20,6 +20,37 @@ An automated tool for managing High Availability (HA) version upgrades on Radwar
 - Upgrade file (.tar.gz format)
 - Required Python packages (see requirements.txt)
 
+## 🌐 Network Connectivity
+
+### Requirements
+- **HTTPS Access**: Port 443 must be accessible on both controllers
+- **Stable Connection**: Required for large file uploads (GB-sized upgrade files)
+- **Network Bandwidth**: Minimum 100 Mbps recommended for efficient uploads
+- **Low Latency**: Network latency should be minimal for reliable API communications
+
+### Connectivity Checklist
+Before running the automation:
+1. Verify you can ping both primary and secondary controller IP addresses
+2. Test HTTPS access: `curl -k https://<controller-ip>/mgmt/system/status`
+3. Ensure no firewalls are blocking HTTPS traffic
+4. Check that both controllers are on the same network segment (recommended)
+5. Verify DNS resolution if using hostnames instead of IP addresses
+
+### Upload Performance
+- **Large Files (>5GB)**: May take 30+ minutes per controller
+- **Keep-Alive**: Automatically sends heartbeat every 5 minutes during upload
+- **Progress Tracking**: Real-time progress display with percentage and MB uploaded
+- **Network Interruption**: Script includes retry logic and can resume from checkpoints
+
+### Network Topology
+```
+[Automation Host]
+       |
+       +------ HTTPS (443) -----> [Primary Controller]
+       |
+       +------ HTTPS (443) -----> [Secondary Controller]
+```
+
 ## 🚀 Installation
 
 1. Clone the repository:
